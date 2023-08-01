@@ -55,9 +55,10 @@ rxdf = pd.read_csv("messagesReceived_RX.csv")
 # Print Analysis
 a = rxdf["Time"] # get time array
 instLatency =  [x - a[i - 1] for i, x in enumerate(a)][1:]
+avgLatency = sum(instLatency)/len(instLatency)
 reliability = 0
 print("Messgaes Received: " + str(len(rxdf)))
-print("Latency: " + str(reliability) + "%")
+print("Latency: " + str(avgLatency) + "%")
 
 # Save results of analysis
 reliabilityPD = pd.DataFrame({"Latency" : instLatency,"msg" : rxdf["Message"][0:-2]})
