@@ -37,7 +37,7 @@ while (time.perf_counter()-start_time<dur): # The program never ends... will be 
     # sys.stdin.readline()
     output = ser.read_until(expected=DATA_END) # read output
     timeList.append(time.perf_counter())
-    msgList.append(output)
+    msgList.append(output.decode('utf-8'))
     # time.sleep(1)
 
 # Close port    

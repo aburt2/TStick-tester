@@ -16,12 +16,12 @@ DATA_START = b'<<<'
 DATA_END = b'\n'
 
 # Ports
-rxPort = 'COM8'
+rxPort = 'COM3'
 dur = 60
 board = 'tinypico'
 
 # Setup testing parameters
-poll_delay = 100
+poll_delay = 0
 
 # Setup Threads
 p1 = Popen(['python', './ReadCOM.py', rxPort, BAUDRATE, str(dur)], stdout=PIPE,text=True) 
@@ -53,16 +53,19 @@ rxdf = pd.read_csv("messagesReceived_RX.csv")
 # txdf = pd.read_csv("messagesReceived_TX.csv")
 
 # Print Analysis
-a = rxdf["Time"] # get time array
-instLatency =  [x - a[i - 1] for i, x in enumerate(a)][1:]
-avgLatency = sum(instLatency)/len(instLatency)
-reliability = 0
+instLatency = rxdf["Time"].diff() # get time array
+avgLatency = instLatency.mean()
+
+# Clean up Messages and output if messages were consecutive
+msg = rxdf["Message"].replace('\r\n','')
+
+# Print messages 
 print("Messgaes Received: " + str(len(rxdf)))
-print("Latency: " + str(avgLatency) + "%")
+print("Latency: " + str(avgLatency) + "s")
 
 # Save results of analysis
-reliabilityPD = pd.DataFrame({"Latency" : instLatency,"msg" : rxdf["Message"][0:-2]})
+reliabilityPD = pd.DataFrame({"Latency" : instLatency,"msg" : msg})
 #fileName = "reliabilityResults/results_dur"+str(dur)+"_txdelay"+str(tx_delay)+"_msglength"+str(msg_length)+"_boardist"+str(board_dist)+pipeCond+".csv"
-fileName = "formalResults/"+str(dur)+"_libmapperdelay"+board+"_board.csv"
+fileName = "formalResults/"+"wifitests_"+str(poll_delay)+"_libmapperdelay"+board+"_board.csv"
 #fileName = "occlusionResults2/txdelay"+str(tx_delay)+"_msglength"+str(msg_length)+"_boardist"+str(board_dist)+pipeCond+trial_num+".csv"
 reliabilityPD.to_csv(fileName, encoding='utf-8', index=False)

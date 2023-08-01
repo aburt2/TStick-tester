@@ -49,7 +49,7 @@ void loop() {
   Serial.println(receivedValue);
 
   // Update libmapper device
-  mpr_dev_poll(dev, 500);
+  mpr_dev_poll(dev, 0);
 }
 
 void inputSignalHandler(mpr_sig sig, mpr_sig_evt evt, mpr_id inst, int length,
