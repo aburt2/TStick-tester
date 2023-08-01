@@ -16,21 +16,21 @@ DATA_START = b'<<<'
 DATA_END = b'\n'
 
 # Ports
-txPort = 'COM11'
 rxPort = 'COM8'
-dur = 10
+dur = 60
+board = 'tinypico'
 
 # Setup testing parameters
 poll_delay = 100
 
 # Setup Threads
-p1 = Popen(['python', './ReadCOM.py', txPort, BAUDRATE, str(dur)], stdout=PIPE,text=True) 
+p1 = Popen(['python', './ReadCOM.py', rxPort, BAUDRATE, str(dur)], stdout=PIPE,text=True) 
 # p2 = Popen(['python', './ReadCOM.py', rxPort, BAUDRATE, str(dur)], stdout=PIPE,text=True)
 
 start_time = time.perf_counter()
 cur_time = 0
 
-while ((p2.poll() is None) or (p1.poll() is None)):
+while ((p1.poll() is None)):
     print("Still working...")
     # sleep a while
     # time_passed = time.perf_counter()-start_time
@@ -53,14 +53,15 @@ rxdf = pd.read_csv("messagesReceived_RX.csv")
 # txdf = pd.read_csv("messagesReceived_TX.csv")
 
 # Print Analysis
-latency = 0
+a = rxdf["Time"] # get time array
+instLatency =  [x - a[i - 1] for i, x in enumerate(a)][1:]
 reliability = 0
 print("Messgaes Received: " + str(len(rxdf)))
-print("Precentage of messages received: " + str(reliability) + "%")
+print("Latency: " + str(reliability) + "%")
 
 # Save results of analysis
-reliabilityPD = pd.DataFrame({"Reliability" : [reliability],"Duration" : [dur], "TX Delay" : [tx_delay],"Message Length" : [msg_length],"Msg Sent":[len(txdf)],"Msg received" : [len(rxdf)]})
+reliabilityPD = pd.DataFrame({"Latency" : instLatency,"msg" : rxdf["Message"][0:-2]})
 #fileName = "reliabilityResults/results_dur"+str(dur)+"_txdelay"+str(tx_delay)+"_msglength"+str(msg_length)+"_boardist"+str(board_dist)+pipeCond+".csv"
-fileName = "formalResults/"+pipeCond+"_txdelay"+str(tx_delay)+"_msglength"+str(msg_length)+"_boardist"+str(board_dist)+".csv"
+fileName = "formalResults/"+str(dur)+"_libmapperdelay"+board+"_board.csv"
 #fileName = "occlusionResults2/txdelay"+str(tx_delay)+"_msglength"+str(msg_length)+"_boardist"+str(board_dist)+pipeCond+trial_num+".csv"
 reliabilityPD.to_csv(fileName, encoding='utf-8', index=False)
