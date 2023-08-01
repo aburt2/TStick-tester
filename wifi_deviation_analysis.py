@@ -51,11 +51,16 @@ def analyse_data(poll_delay,board,parent_folder):
     timedf['SMA10'] = timedf.rolling(10).mean()
     timedf['SMA10'].dropna(inplace=True)
 
+    # Get average and standard deviation
+    avg = tmpdf['Latency'].mean()
+    stdev = tmpdf['Latency'].std()
+    legendstr = 'Poll delay = ' + str(delay) +', Average = ' + str(np.round(avg,2)) + u"\u00B1" + str(np.round(stdev,2))
+
     # Get places without consecutive messages
     # timedf['consecutive'] = logicDif
 
     # Get array as a difference from the mean
-    timedf['deviation'] = timedf['Latency'] - timedf['Latency'].mean()
+    timedf['deviation'] = timedf['Latency'] - avg
 
     # Create plot and axis labels
     fig, axs = plt.subplots(2)
@@ -105,7 +110,9 @@ for delay in poll_delay:
     dataDf.append(tmpdf)
 
     # Plto on axis
-    legendstr = 'Poll delay = ' + str(delay)
+    avg = tmpdf['Latency'].mean()
+    stdev = tmpdf['Latency'].std()
+    legendstr = 'Poll delay = ' + str(delay) +', Average = ' + str(np.round(avg,2)) + u"\u00B1" + str(np.round(stdev,2))
     legendList.append(legendstr)
     tmpdf[['deviation']].plot(ax=ax, label=legendstr, figsize=(16,8))
 

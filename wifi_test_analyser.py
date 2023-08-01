@@ -5,12 +5,12 @@ import matplotlib.pyplot as plt
 import math
 
 # Set test parameters
-poll_delay = 0
+poll_delay = 500
 board = 'tinypico'
 
 
 # construct filename
-fileName = "selfResults/"+"wifitests_"+str(poll_delay)+"_libmapperdelay"+board+"_board.csv"
+fileName = "formalResults/"+"wifitests_"+str(poll_delay)+"_libmapperdelay"+board+"_board.csv"
 
 # Open test daya
 rxdf = pd.read_csv(fileName)
@@ -29,8 +29,7 @@ filter_time = time[msg>0]
 
 # Get difference of time
 msgDif = filter_msg.diff()
-logicDif = np.where(msgDif <= 0.02, True, False)
-
+logicDif = np.where(msgDif > 0, True, False)
 # Compute latency taking into account missed messages
 time_list = filter_time.to_list()
 new_latency = []
