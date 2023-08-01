@@ -21,7 +21,7 @@ dur = 60
 board = 'tinypico'
 
 # Setup testing parameters
-poll_delay = 0
+poll_delay = 500
 
 # Setup Threads
 p1 = Popen(['python', './ReadCOM.py', rxPort, BAUDRATE, str(dur)], stdout=PIPE,text=True) 

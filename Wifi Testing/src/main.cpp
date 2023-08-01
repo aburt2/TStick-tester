@@ -31,7 +31,7 @@ void setup() {
   float signalMin = 0.0f;
   float signalMax = 5.0f;
 
-  dev = mpr_dev_new("ESP32", 0);
+  dev = mpr_dev_new("ESP32-Receiver", 0);
   outputSignal = mpr_sig_new(dev, MPR_DIR_OUT, "output", 1, MPR_FLT, 0,
                              &signalMin, &signalMax, 0, 0, 0);
   inputSignal = mpr_sig_new(dev, MPR_DIR_IN, "input", 1, MPR_FLT, 0,
@@ -49,7 +49,7 @@ void loop() {
   Serial.println(receivedValue);
 
   // Update libmapper device
-  mpr_dev_poll(dev, 0);
+  mpr_dev_poll(dev, 500);
 }
 
 void inputSignalHandler(mpr_sig sig, mpr_sig_evt evt, mpr_id inst, int length,
