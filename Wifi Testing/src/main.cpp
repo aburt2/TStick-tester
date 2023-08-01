@@ -46,8 +46,6 @@ void loop() {
   mpr_sig_set_value(outputSignal, 0, 1, MPR_FLT, &seqNumber);
 
   // Print received value
-  Serial.print(millis());
-  Serial.print(" - received: ");
   Serial.println(receivedValue);
 
   // Update libmapper device
