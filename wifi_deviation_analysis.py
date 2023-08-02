@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-import seaborn as sb
+import seaborn as sns
 import matplotlib.pyplot as plt
 import math
 
@@ -122,11 +122,11 @@ parentFolder = 'selfResults'
 dataDf = []
 relList = []
 legendList = []
-# Create axis object
+
+# Create axis object for deviation plot
 fig, ax = plt.subplots()
 xlim = 1e6
 fig.suptitle('Latency Deviation for TinyPico accross different delays')
-ax.set_ylabel('Number of Standard Deviations from Mean')
 
 for delay in poll_delay:
     # Get time df from analysis
@@ -134,12 +134,15 @@ for delay in poll_delay:
     dataDf.append(tmpdf)
     relList.append(tmpreliability)
 
-    # Plto on axis
+    # Plot on axis
     avg = tmpdf['Latency'].mean()
     stdev = tmpdf['Latency'].std()
     legendstr = 'Poll delay = ' + str(delay) +', Average = ' + str(np.round(avg,2)) + u"\u00B1" + str(np.round(stdev,2))
     legendList.append(legendstr)
     tmpdf[['std_deviation']].plot(ax=ax, label=legendstr, figsize=(16,8))
+
+    # Plot distribution
+    sns.displot(tmpdf, x='Latency',kde=True)
 
     # Get xlimit
     if len(tmpdf) < xlim:
