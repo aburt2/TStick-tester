@@ -66,7 +66,7 @@ print("Messgaes Received: " + str(len(rxdf_spark)))
 print("Latency: " + str(avgLatency) + "s")
 
 # Save results of analysis
-reliabilityPD = pd.DataFrame({"Latency" : instLatency,"msg" : msg})
+reliabilityPD = pd.DataFrame({"Latency" : instLatency,"msg" : msg,"time":rxdf_spark["Time"]})
 #fileName = "reliabilityResults/results_dur"+str(dur)+"_txdelay"+str(tx_delay)+"_msglength"+str(msg_length)+"_boardist"+str(board_dist)+pipeCond+".csv"
 fileName = "superlongResults/"+"wifitests_"+str(poll_delay)+"_libmapperdelaysparkfun_board.csv"
 #fileName = "occlusionResults2/txdelay"+str(tx_delay)+"_msglength"+str(msg_length)+"_boardist"+str(board_dist)+pipeCond+trial_num+".csv"
@@ -85,7 +85,7 @@ print("Messgaes Received: " + str(len(rxdf_pico)))
 print("Latency: " + str(avgLatency) + "s")
 
 # Save results of analysis
-reliabilityPD = pd.DataFrame({"Latency" : instLatency,"msg" : msg})
+reliabilityPD = pd.DataFrame({"Latency" : instLatency,"msg" : msg,"time":rxdf_pico["Time"]})
 #fileName = "reliabilityResults/results_dur"+str(dur)+"_txdelay"+str(tx_delay)+"_msglength"+str(msg_length)+"_boardist"+str(board_dist)+pipeCond+".csv"
 fileName = "superlongResults/"+"wifitests_"+str(poll_delay)+"_libmapperdelaytinypico_board.csv"
 #fileName = "occlusionResults2/txdelay"+str(tx_delay)+"_msglength"+str(msg_length)+"_boardist"+str(board_dist)+pipeCond+trial_num+".csv"
