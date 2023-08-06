@@ -5,12 +5,12 @@ import matplotlib.pyplot as plt
 import math
 
 # Set test parameters
-poll_delay = 500
-board = 'tinypico'
+poll_delay = 0
+board = 'sparkfun'
 
 
 # construct filename
-fileName = "formalResults/"+"wifitests_"+str(poll_delay)+"_libmapperdelay"+board+"_board.csv"
+fileName = "longResults/"+"wifitests_"+str(poll_delay)+"_libmapperdelay"+board+"_board.csv"
 
 # Open test daya
 rxdf = pd.read_csv(fileName)
@@ -48,20 +48,20 @@ while idx < len(time_list):
 
 # Get rolling average of latency
 timedf = pd.DataFrame({'Latency':new_latency})
-timedf['SMA10'] = timedf.rolling(10).mean()
-timedf['SMA10'].dropna(inplace=True)
+timedf['SMA100'] = timedf.rolling(100).mean()
+timedf['SMA100'].dropna(inplace=True)
 
 # Get places without consecutive messages
 # timedf['consecutive'] = logicDif
 
 # Get array as a difference from the mean
-timedf['deviation'] = timedf['Latency'] - timedf['Latency'].mean()
+timedf['deviation'] = (timedf['SMA100'] - timedf['SMA100'].mean())/(timedf['SMA100'].std())
 
 # Create plot and axis labels
 fig, axs = plt.subplots(2)
 
 # Plot Time
-timedf[['Latency','SMA10']].plot(ax=axs[0],label='Latency', figsize=(16,8))
+timedf[['SMA100']].plot(ax=axs[0],label='Latency', figsize=(16,8))
 titlestr = 'Latency of ' + board + ', Poll delay = ' + str(poll_delay)
 
 # Plot Deviation
@@ -72,7 +72,7 @@ titlestr = 'Latency of ' + board + ', Poll delay = ' + str(poll_delay)
 # Latency Plot parameters
 axs[0].set_ylabel('Latency (ms)')
 # Deviation Plot parameters
-axs[1].set_ylabel('Deviation from Mean (ms)')
+axs[1].set_ylabel('Deviation from Mean (num of std)')
 # Figure parameters
 fig.suptitle(titlestr)
 
