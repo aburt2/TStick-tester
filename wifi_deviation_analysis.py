@@ -186,7 +186,7 @@ def analyse_data(poll_delay,board,parent_folder,dur='60 seconds',window="1s"):
 # Set test parameters
 poll_delay = [0]
 boards = ['tinypico','sparkfun']
-parentFolder = 'superlongResults'
+parentFolder = 'test'
 window = "1s"
 smastr = 'SMA'+str(window)
 dur = '30 minutes'

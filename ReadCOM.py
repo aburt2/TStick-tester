@@ -20,10 +20,7 @@ msgList = []
 fileName = "messagesReceived_"
 
 # Determine if it is the transmitter or receiver we are connected to
-if sys.argv[1] == 'COM4':
-    device = "RX_pico.csv"
-else:
-    device = "RX_spark.csv"
+device = sys.argv[4]
 
 # Update filename
 fileName = fileName + device
