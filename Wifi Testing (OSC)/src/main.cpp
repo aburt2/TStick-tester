@@ -15,24 +15,17 @@
 #include <OSCMessage.h>
 #include <OSCBundle.h>
 
-char ssid[] = "*****************";          // your network SSID (name)
-char pass[] = "*******";                    // your network password
+char ssid[] = "***************";          // your network SSID (name)
+char pass[] = "***************";                    // your network password
 
 WiFiUDP Udp;                                // A UDP instance to let us send and receive packets over UDP
-const IPAddress outIp(10,40,10,105);        // remote IP of your computer
+const IPAddress outIp(192,168,0,10);        // remote IP of your computer
 const unsigned int outPort = 8000;          // remote port to receive OSC
 const unsigned int localPort = 8888;        // local port to listen for OSC packets (actually not used for sending)
 
 // Setup test
 int OSC_DELAY = 500; // ms delay
 int seq = 0; // sequence
-int last_time = 0;
-bool first = true;
-
-// OSC messages
-OSCMessage rxmsg;
-OSCMessage txmsg;
-int rx_num;
 
 void setup() {
     Serial.begin(115200);
@@ -65,39 +58,18 @@ void setup() {
 
 }
 
-void rxnum(OSCMessage &msg) {
-  rx_num = msg.getInt(0);
-  Serial.println(rx_num);
-}
+void loop() { 
+    // Send message
+    OSCMessage msg("/test");
+    msg.add(seq);
+    Udp.beginPacket(outIp, outPort);
+    msg.send(Udp);
+    Udp.endPacket();
+    msg.empty();
 
-void loop() {
-    // Receive OSC Messages
-    int size = Udp.parsePacket();
+    // Increase sequence
+    seq++;
 
-    if (size > 0) {
-      while (size--) {
-        rxmsg.fill(Udp.read());
-      }
-      if (!rxmsg.hasError()) {
-        rxmsg.dispatch("/test", rxnum);
-        Serial.println(rx_num);
-      }
-    }
-
-    if ((millis() - last_time) > OSC_DELAY)  {
-      // set new time
-      last_time = millis();
-      
-      // Send message
-      OSCMessage msg("/test");
-      msg.add(seq);
-      Udp.beginPacket(outIp, outPort);
-      msg.send(Udp);
-      Udp.endPacket();
-      msg.empty();
-      delay(OSC_DELAY);
-
-      // Increase sequence
-      seq++;
-    }
+    // Delay sending next packet
+    delay(OSC_DELAY);
 }
