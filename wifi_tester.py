@@ -1,6 +1,3 @@
-
-
-
 # Standard libraries
 from subprocess import Popen, run,PIPE
 import time
