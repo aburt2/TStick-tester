@@ -91,102 +91,99 @@ def analyse_data(poll_delay,board,parent_folder,dur='60 seconds',window="1s"):
         timedf[smastr].dropna(inplace=True)
     else:
         # Get old analysed data
-        timedf = pd.read_csv(analysed_filename,index_col='time_idx',parse_dates=True)
+        timedf = pd.read_csv(analysed_filename,parse_dates=True)
+        
+        # Get relibaility stats
+        msgDif = timedf[['msgdif']]
+        logicDif = np.where(msgDif > 0, 1, 0)
+        missedDif = np.where(np.logical_and(msgDif>0,msgDif<0.01),1,0)
 
-        # Set up tmpdf
-        tmpdf = timedf[['time','Latency']]
-        tmpdf['time'] = pd.to_timedelta(tmpdf['time'], unit='s')
-        tmpdf.set_index('time',inplace=True)
+        # Calculate number of received messages, and missed messages
+        rxmsg = sum(logicDif)
+        missedmsg = len(msgDif)-sum(missedDif)
+        reliability = 1 - missedmsg/len(msgDif)
 
-        # Compute rolling average over window
-        timedf[smastr] = tmpdf.rolling(window).mean()
-        timedf[smastr].dropna(inplace=True)
-
+        # Store in a dictionary
+        reliabilityStats = dict({'rxmsg':rxmsg, 'missedmsg':missedmsg, 'reliability':reliability})
 
     # Get average and standard deviation
     avg = timedf['Latency'].mean()
     stdev = timedf['Latency'].std()
     avg_stdev = timedf[smastr].std()
-
-    # Get places without consecutive messages
-    # timedf['consecutive'] = logicDif
-
-    # Get array as a difference from the mean
-    timedf['deviation'] = timedf['Latency'] - avg
-    timedf['std_deviation'] = timedf['deviation']/stdev
-    timedf['avg_std_deviation'] = timedf[smastr]/avg_stdev
-
-    # Create plot and axis labels
-    fig, axs = plt.subplots(2)
-
-    # Plot Time
-    timedf.plot(ax=axs[0],x='time',y='Latency',label='Latency', figsize=(16,8))
-
     
-    # Plot Time
-    timedf.plot(ax=axs[1],x='time',y=smastr,label='Simple Moving Average, window = ' + window, figsize=(16,8))
-
-    # # Plot Deviation
-    # timedf[['std_deviation']].plot(ax=axs[2],label='Deviation', figsize=(16,8))
-
-    # # Plot Deviation
-    # timedf[['avg_std_deviation']].plot(ax=axs[3],label='Deviation', figsize=(16,8))
-
-    # Plot parameters
-    # Latency Plot parameters
-    axs[0].set_ylabel('Latency (ms)')
-    axs[1].set_ylabel('Latency (ms)')
-    # # Deviation Plot parameters
-    # axs[2].set_ylabel('Deviation from Mean (ms)')
-    # axs[3].set_ylabel('Deviation from Mean (ms)')
-
-    # Limit y axis to see variation a bit better
-    ylim0 = np.ceil(avg + stdev*10)
-    ylim1 = np.ceil(avg + stdev*3)
-    axs[0].set_ylim(0,ylim0)
-    axs[1].set_ylim(0,ylim1)
-
-    # Figure parameters
+    # Generate title string
     titlestr = 'Latency of ' + board + ', Poll delay = ' + str(poll_delay) + ', Average = ' + str(np.round(avg,2)) + u"\u00B1" + str(np.round(stdev,2)) +' Test Duration = ' + dur 
-    fig.suptitle(titlestr)
 
-    # Save figure
-    fig.savefig(pic_fileName)
-    plt.close(fig)
+    if not fileExists:
+        # Get array as a difference from the mean
+        timedf['deviation'] = timedf['Latency'] - avg
+        timedf['std_deviation'] = timedf['deviation']/stdev
+        timedf['avg_std_deviation'] = timedf[smastr]/avg_stdev
 
-    # save analysed data
-    timedf.to_csv(analysed_filename)
+        # Create plot and axis labels
+        fig, axs = plt.subplots(2)
+        
+        # Plot Time
+        timedf.plot(ax=axs[0],x='time',y='Latency',label='Latency', figsize=(16,8))
+        # Plot Time
+        timedf.plot(ax=axs[1],x='time',y=smastr,label='Simple Moving Average, window = ' + window, figsize=(16,8))
+
+        # # Plot Deviation
+        # timedf[['std_deviation']].plot(ax=axs[2],label='Deviation', figsize=(16,8))
+
+        # # Plot Deviation
+        # timedf[['avg_std_deviation']].plot(ax=axs[3],label='Deviation', figsize=(16,8))
+
+        # Plot parameters
+        # Latency Plot parameters
+        axs[0].set_ylabel('Latency (ms)')
+        axs[1].set_ylabel('Latency (ms)')
+        # # Deviation Plot parameters
+        # axs[2].set_ylabel('Deviation from Mean (ms)')
+        # axs[3].set_ylabel('Deviation from Mean (ms)')
+
+        # Limit y axis to see variation a bit better
+        ylim0 = np.ceil(avg + stdev*10)
+        ylim1 = np.ceil(avg + stdev*3)
+        axs[0].set_ylim(0,ylim0)
+        axs[1].set_ylim(0,ylim1)
+
+        # Figure parameters
+        fig.suptitle(titlestr)
+
+        # Save figure
+        fig.savefig(pic_fileName)
+        plt.close(fig)
+
+        # save analysed data
+        timedf.to_csv(analysed_filename)
 
     # Print some statistics about this Data Set
-    if not fileExists:
-        # Set up strings
-        startstr = '\n************************************************'
-        endstr = '************************************************\n'
-        latencystr = 'Average Latency = ' + str(avg)
-        rxmsgstr = 'Received Messages = ' + str(rxmsg)
-        missedmsgstr = 'Missed Messages = ' + str(missedmsg)
-        reliabilitystr = 'Packet Loss = ' + str(np.round(100*(1-reliability),2)) +'%'
-        extremestr = 'Highest Latency = ' + str(max(timedf['Latency']))
-        loweststr = 'Lowest Latency = ' + str(min(timedf['Latency']))
-        print(startstr)
-        print(titlestr)
-        print(rxmsgstr)
-        print(missedmsgstr)
-        print(reliabilitystr)
-        print(extremestr)
-        print(loweststr)
-        print(endstr)
+    # Set up strings
+    startstr = '\n************************************************'
+    endstr = '************************************************\n'
+    latencystr = 'Average Latency = ' + str(avg)
+    rxmsgstr = 'Received Messages = ' + str(rxmsg)
+    missedmsgstr = 'Missed Messages = ' + str(missedmsg)
+    reliabilitystr = 'Packet Loss = ' + str(np.round(100*(1-reliability),2)) +'%'
+    extremestr = 'Highest Latency = ' + str(max(timedf['Latency']))
+    loweststr = 'Lowest Latency = ' + str(min(timedf['Latency']))
+    print(startstr)
+    print(titlestr)
+    print(rxmsgstr)
+    print(missedmsgstr)
+    print(reliabilitystr)
+    print(extremestr)
+    print(loweststr)
+    print(endstr)
 
-        # Return the df
-        return timedf, reliabilityStats
-    else:
-        reliabilityStats = ""
-        return timedf, reliabilityStats
+    # Return the df
+    return timedf, reliabilityStats
 
 # Set test parameters
 poll_delay = [0]
 boards = ['tinypico','sparkfun']
-parentFolder = 'test'
+parentFolder = 'superlongResults'
 window = "1s"
 smastr = 'SMA'+str(window)
 dur = '30 minutes'
