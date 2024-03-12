@@ -227,7 +227,7 @@ def analyse_data(poll_delay,board,parent_folder,dur='60 seconds',window="1s"):
 # Set test parameters
 poll_delay = [0]
 boards = ['tinypico','sparkfun']
-parentFolder = 'ESP32/badConditionsResults'
+parentFolder = 'data/'
 window = "1s"
 smastr = 'SMA'+str(window)
 dur = '5 minutes'
