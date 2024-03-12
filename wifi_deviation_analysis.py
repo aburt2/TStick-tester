@@ -6,6 +6,51 @@ import math
 import os
 
 # Define some analysis functions
+def compute_reliability(dif_array, min_packet):
+    '''
+    Compute the reliability given a list of message differences and the minimum number of missed packets to be considered a failure
+    '''
+    #Compute difference threshold
+    threshold = (min_packet + 1) * 0.01
+    
+    logicDif = np.where(dif_array > 0, 1, 0)
+    missedDif = np.where(dif_array<threshold,1,0)
+
+    # Calculate number of received messages, and missed messages
+    rxmsg = sum(logicDif)
+    missedmsg = len(dif_array)-sum(missedDif)
+    
+    # Calculate Reliability for 1, 2 and 5 consecutive missed messages
+    reliability = 1 - missedmsg/len(dif_array)
+    
+    return rxmsg, missedmsg, reliability
+
+def analyse_packet_loss(data, window):
+    '''
+    Analyse the packet loss 
+    '''    
+    # Create empty list
+    packet_loss = []
+    min_idx = 0
+    total_packets = len(data)
+    idx = 0
+    
+    print('Analysing Reliability Data will take a while')
+    while (min_idx < (total_packets - window)):
+        min_idx = idx
+        max_idx = idx + window
+        if (max_idx > total_packets):
+            max_idx = total_packets - 1
+        tmp_data = data[min_idx:max_idx]
+        tmp_rel = compute_reliability(tmp_data, 1)[2]
+        tmp_loss = 100*(1 - tmp_rel)
+        packet_loss.append(tmp_loss[0])
+        idx += 1
+    
+    # Create panda dataframe
+    rel_data = pd.DataFrame({'Packet Loss (%)':packet_loss})
+    return rel_data
+
 def analyse_data(poll_delay,board,parent_folder,dur='60 seconds',window="1s"):
     '''
     Do some basic analysis on the wifi data
@@ -14,6 +59,7 @@ def analyse_data(poll_delay,board,parent_folder,dur='60 seconds',window="1s"):
     fileName = parent_folder+"/"+"wifitests_"+str(poll_delay)+"_libmapperdelay"+board+"_board.csv"
     pic_fileName = parent_folder+"/"+"wifitests_"+str(poll_delay)+"window"+window+"_libmapperdelay"+board+"_board.png"
     analysed_filename = parent_folder+"/"+"analysed_"+"wifitests_"+str(poll_delay)+"_libmapperdelay"+board+"_board.csv"
+    reliability_filename = parent_folder+"/"+"reliability_"+"wifitests_"+str(poll_delay)+"_libmapperdelay"+board+"_board.csv"
 
     # Name for simple moving average column
     smastr = 'SMA'+str(window)
@@ -23,6 +69,12 @@ def analyse_data(poll_delay,board,parent_folder,dur='60 seconds',window="1s"):
         fileExists = True
     else:
         fileExists = False
+    
+    if os.path.exists(reliability_filename): # if I have already analysed it just open the file again
+        reliabilityfileExists = True
+    else:
+        reliabilityfileExists = False
+    
     if not fileExists:
     # If I haven't already analysed the data and cleaned it do it now
         # Open test daya
@@ -41,15 +93,6 @@ def analyse_data(poll_delay,board,parent_folder,dur='60 seconds',window="1s"):
         # Get difference of time
         msgDif = filter_msg.diff()
         logicDif = np.where(msgDif > 0, 1, 0)
-        missedDif = np.where(np.logical_and(msgDif>0,msgDif<0.02),1,0)
-
-        # Calculate number of received messages, and missed messages
-        rxmsg = sum(logicDif)
-        missedmsg = len(msgDif)-sum(missedDif)
-        reliability = 1 - missedmsg/len(msgDif)
-
-        # Store in a dictionary
-        reliabilityStats = dict({'rxmsg':rxmsg, 'missedmsg':missedmsg, 'reliability':reliability})
 
         # Compute latency taking into account missed messages
         time_list = filter_time.to_list()
@@ -60,6 +103,7 @@ def analyse_data(poll_delay,board,parent_folder,dur='60 seconds',window="1s"):
         new_dif = []
         new_msg = []
         new_time = []
+        rel_time = []
         idx = 1
         tmp = 0
         while idx < len(time_list):
@@ -71,12 +115,13 @@ def analyse_data(poll_delay,board,parent_folder,dur='60 seconds',window="1s"):
                 new_dif.append(dif_list[idx])
                 new_msg.append(msg_list[idx])
                 new_time.append(time_abs_list[idx])
+                rel_time.append(time_abs_list[idx] - time_abs_list[0])
                 tmp = 0
             # Increment index
             idx += 1  
 
         # Create new timedf
-        timedf = pd.DataFrame({'Latency':new_latency,'msgdif':new_dif,'msg':new_msg,'time':new_time})
+        timedf = pd.DataFrame({'Latency':new_latency,'msgdif':new_dif,'msg':new_msg,'time':new_time, 'relative_time':rel_time})
         timedf['time_idx'] = pd.to_timedelta(timedf['time'], unit='s')
         timedf.set_index('time_idx',inplace=True)
 
@@ -92,19 +137,17 @@ def analyse_data(poll_delay,board,parent_folder,dur='60 seconds',window="1s"):
     else:
         # Get old analysed data
         timedf = pd.read_csv(analysed_filename,parse_dates=True)
-        
-        # Get relibaility stats
-        msgDif = timedf[['msgdif']]
-        logicDif = np.where(msgDif > 0, 1, 0)
-        missedDif = np.where(np.logical_and(msgDif>0,msgDif<0.01),1,0)
-
-        # Calculate number of received messages, and missed messages
-        rxmsg = sum(logicDif)
-        missedmsg = len(msgDif)-sum(missedDif)
-        reliability = 1 - missedmsg/len(msgDif)
-
-        # Store in a dictionary
-        reliabilityStats = dict({'rxmsg':rxmsg, 'missedmsg':missedmsg, 'reliability':reliability})
+    
+    # Calculate Reliability for 1, 2 and 5 consecutive missed messages
+    msgDif = timedf[['msgdif']]
+    rxmsg, missedmsg, reliability = compute_reliability(msgDif, 1)
+    
+    # Get more detailed reliability data
+    if not reliabilityfileExists:
+        rel_df = analyse_packet_loss(msgDif, 1000)
+        rel_df.to_csv(reliability_filename)
+    else:
+        rel_df = pd.read_csv(reliability_filename)
 
     # Get average and standard deviation
     avg = timedf['Latency'].mean()
@@ -114,47 +157,47 @@ def analyse_data(poll_delay,board,parent_folder,dur='60 seconds',window="1s"):
     # Generate title string
     titlestr = 'Latency of ' + board + ', Poll delay = ' + str(poll_delay) + ', Average = ' + str(np.round(avg,2)) + u"\u00B1" + str(np.round(stdev,2)) +' Test Duration = ' + dur 
 
+    # Get array as a difference from the mean
+    timedf['deviation'] = timedf['Latency'] - avg
+    timedf['std_deviation'] = timedf['deviation']/stdev
+    timedf['avg_std_deviation'] = timedf[smastr]/avg_stdev
+
+    # Create plot and axis labels
+    fig, axs = plt.subplots(2)
+    
+    # Plot Time
+    timedf.plot(ax=axs[0],x='relative_time',y='Latency',label='Latency', figsize=(16,8))
+    # Plot Time
+    timedf.plot(ax=axs[1],x='relative_time',y=smastr,label='Simple Moving Average, window = ' + window, figsize=(16,8))
+
+    # # Plot Deviation
+    # timedf[['std_deviation']].plot(ax=axs[2],label='Deviation', figsize=(16,8))
+
+    # # Plot Deviation
+    # timedf[['avg_std_deviation']].plot(ax=axs[3],label='Deviation', figsize=(16,8))
+
+    # Plot parameters
+    # Latency Plot parameters
+    axs[0].set_ylabel('Latency (ms)')
+    axs[1].set_ylabel('Latency (ms)')
+    # # Deviation Plot parameters
+    # axs[2].set_ylabel('Deviation from Mean (ms)')
+    # axs[3].set_ylabel('Deviation from Mean (ms)')
+
+    # Limit y axis to see variation a bit better
+    ylim0 = np.ceil(avg + stdev*10)
+    ylim1 = np.ceil(avg + stdev*3)
+    axs[0].set_ylim(0,ylim0)
+    axs[1].set_ylim(0,ylim1)
+
+    # Figure parameters
+    fig.suptitle(titlestr)
+
+    # Save figure
+    fig.savefig(pic_fileName)
+    plt.close(fig)
+
     if not fileExists:
-        # Get array as a difference from the mean
-        timedf['deviation'] = timedf['Latency'] - avg
-        timedf['std_deviation'] = timedf['deviation']/stdev
-        timedf['avg_std_deviation'] = timedf[smastr]/avg_stdev
-
-        # Create plot and axis labels
-        fig, axs = plt.subplots(2)
-        
-        # Plot Time
-        timedf.plot(ax=axs[0],x='time',y='Latency',label='Latency', figsize=(16,8))
-        # Plot Time
-        timedf.plot(ax=axs[1],x='time',y=smastr,label='Simple Moving Average, window = ' + window, figsize=(16,8))
-
-        # # Plot Deviation
-        # timedf[['std_deviation']].plot(ax=axs[2],label='Deviation', figsize=(16,8))
-
-        # # Plot Deviation
-        # timedf[['avg_std_deviation']].plot(ax=axs[3],label='Deviation', figsize=(16,8))
-
-        # Plot parameters
-        # Latency Plot parameters
-        axs[0].set_ylabel('Latency (ms)')
-        axs[1].set_ylabel('Latency (ms)')
-        # # Deviation Plot parameters
-        # axs[2].set_ylabel('Deviation from Mean (ms)')
-        # axs[3].set_ylabel('Deviation from Mean (ms)')
-
-        # Limit y axis to see variation a bit better
-        ylim0 = np.ceil(avg + stdev*10)
-        ylim1 = np.ceil(avg + stdev*3)
-        axs[0].set_ylim(0,ylim0)
-        axs[1].set_ylim(0,ylim1)
-
-        # Figure parameters
-        fig.suptitle(titlestr)
-
-        # Save figure
-        fig.savefig(pic_fileName)
-        plt.close(fig)
-
         # save analysed data
         timedf.to_csv(analysed_filename)
 
@@ -172,22 +215,24 @@ def analyse_data(poll_delay,board,parent_folder,dur='60 seconds',window="1s"):
     print(titlestr)
     print(rxmsgstr)
     print(missedmsgstr)
+    print(latencystr)
     print(reliabilitystr)
     print(extremestr)
     print(loweststr)
     print(endstr)
 
     # Return the df
-    return timedf, reliabilityStats
+    return timedf, rel_df
 
 # Set test parameters
 poll_delay = [0]
 boards = ['tinypico','sparkfun']
-parentFolder = 'superlongResults'
+parentFolder = 'ESP32/badConditionsResults'
 window = "1s"
 smastr = 'SMA'+str(window)
-dur = '30 minutes'
-plot_distribution = False
+dur = '5 minutes'
+plot_distribution = True
+plot_reliability = True
 
 # Setup empty list
 dataDf = []
@@ -211,17 +256,34 @@ for board in boards:
         stdev = tmpdf['Latency'].std()
         legendstr = board + ', Poll delay = ' + str(delay) +', Average = ' + str(np.round(avg,2)) + u"\u00B1" + str(np.round(stdev,2))
         legendList.append(legendstr)
-        tmpdf.plot(ax=ax,x='time',y=smastr,label=legendstr, figsize=(16,8))
+        tmpdf.plot(ax=ax,x='relative_time',y=smastr,label=legendstr, figsize=(16,8))
 
-        # Plot distribution
+        # Plot latency distribution
         if plot_distribution:
-            titlestr = 'Latency of ' + board + ', Poll delay = ' + str(delay) + ', Average = ' + str(np.round(avg,2)) + u"\u00B1" + str(np.round(stdev,2))
+            titlestr = 'Latency Distribution of ' + board
             plot_filename = parentFolder+"/"+"wifitests_"+str(delay)+"_libmapperdelay"+board+"_board_distribution.png"
-            sns.displot(tmpdf, x='Latency')
-            fig = plt.gcf()
-            fig.suptitle(titlestr)
-            fig.savefig(plot_filename)
-            plt.close(fig)
+            tmpax = sns.displot(tmpdf, x='Latency')
+            tmpax.set_axis_labels("Latency (ms)")
+            tmpax.set(xlim=(0,30))
+            tmpfig = plt.gcf()
+            tmpfig.suptitle(titlestr)
+            tmpfig.savefig(plot_filename)
+            plt.close(tmpfig)
+
+        if plot_reliability:
+            titlestr = 'Packet Loss Distribution of ' + board
+            plot_filename = parentFolder+"/"+"wifitests_"+str(delay)+"_libmapperdelay"+board+"_packet_loss.png"
+            tmpax = sns.displot(tmpreliability, x='Packet Loss (%)')
+
+            # Show what the target loss is
+            min_loss = 1
+            p1 = plt.axvline(x=min_loss,color='#36802D')
+            
+            # Change Plot Title
+            tmpfig = plt.gcf()
+            tmpfig.suptitle(titlestr)
+            tmpfig.savefig(plot_filename)
+            plt.close(tmpfig)
 
         # Get xlimit
         if len(tmpdf) < xlim:
@@ -230,7 +292,7 @@ for board in boards:
 # Show plot
 # ax.set_xlim(0,xlim)
 ax.legend(legendList)
-ax.set_ylim(0,50)
+ax.set_ylim(0,10)
 ax.set_xlabel('time (seconds)')
 ax.set_ylabel('Latency (ms)')
 plt.show()
