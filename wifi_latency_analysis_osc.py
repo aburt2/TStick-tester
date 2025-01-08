@@ -85,13 +85,18 @@ relList = []
 legendList = []
 bin_xlim = 0
 
-scenario_list = ['5Ghz multiple devices', '2.4Ghz multiple devices', '5GHz single device', '2.4GHz single device']
+# Lists for scenarios and order
+frequency_list = ['5Ghz', '2.4Ghz']
+condition_list = ['multiple devices', 'single device']
 
+for condition in scenario:
+    if condition > 2:
+        idx = condition - 3
+    else:
+        idx = condition - 1
 
-for delay in scenario:
-    # Get time df from analysis
-    print(delay)
-    tmpdf = analyse_data(delay,parentFolder,dur=dur)
+    # Get data from file
+    tmpdf = analyse_data(condition,parentFolder,dur=dur)
     dataDf.append(tmpdf)
 
     # Get x limit
@@ -100,8 +105,8 @@ for delay in scenario:
 
     # Plot latency distribution
     if plot_distribution:
-        titlestr = 'Latency Distribution: ' + scenario_list[delay-1]
-        plot_filename = parentFolder+"/"+"wifitests_"+str(delay)+"_latencydelay.png"
+        titlestr = 'Latency Distribution: ' + frequency_list[idx]
+        plot_filename = parentFolder+"/"+"wifitests_"+str(condition)+"_latencydelay.png"
         tmpax = sns.displot(tmpdf, x='Latency')
         tmpax.set_axis_labels("Latency (ms)")
         tmpax.set(xlim=(0,upper_xlim))
@@ -114,33 +119,67 @@ for delay in scenario:
 
 if len(scenario) > 1:
     # Create axis object for deviation plot
-    fig, ax = plt.subplots()
+    fig_box, ax_box = plt.subplots()
+    fig_hist, ax_hist = plt.subplots()
 
-    # compute max range of bins
-    bin_xlim = int(np.ceil(bin_xlim))
+    # create empty boxplot
+    boxDf = pd.DataFrame({'Latency' : [],'Frequency' : [], 'Condition' : []})
 
-    for idx in range(0, len(scenario)):
-        # Get time df from analysis
+    for condition in scenario:
+        # Get scenario string
+        if condition > 2:
+            idx = condition - 3
+            scenario_str = frequency_list[idx]
+            condition_str = condition_list[1]
+        else:
+            idx = condition - 1
+            scenario_str = frequency_list[idx]
+            condition_str = condition_list[0]
+        
+        # Get Dataframe
         tmpdf = dataDf[idx]
+
+        # Get scenario string
+        print("Frequency: " + scenario_str)
+        print("Condition: " + condition_str)
+
+        # Add why information
+        tmpdf['Frequency'] = scenario_str
+        tmpdf['Condition'] = condition_str
+        boxDf = pd.concat([boxDf, tmpdf], axis=0, ignore_index=True)
 
         # Set the legend
         avg = tmpdf['Latency'].quantile()
         stdev = (tmpdf['Latency'].quantile(0.75) - tmpdf['Latency'].quantile(0.25))/2
-        legendstr = scenario_list[scenario[idx]-1] +', Average = ' + str(np.round(avg,2)) + u"\u00B1" + str(np.round(stdev,2))
+        legendstr = scenario_str
         legendList.append(legendstr)
 
         # Plot latency distribution
         if plot_distribution:
-            sns.histplot(tmpdf, x='Latency', bins=np.arange(0, bin_xlim, 0.1), ax=ax)
+            sns.histplot(tmpdf, x='Latency', bins=np.arange(0, bin_xlim, 0.1), ax=ax_hist)
+
+    # Plot box plot
+    print(boxDf)
+    sns.boxplot(data=boxDf, x='Latency', y = 'Condition',orient='h', width=0.2, whis=(0, 99), hue="Frequency", ax=ax_box)
     
 
     # Show the graph
     titlestr = 'Latency Distribution'
-    print(legendList)
-    ax.legend(legendList)
-    ax.set_xlim(0,bin_xlim)
-    ax.set_xlabel("Latency (ms)")
-    fig.suptitle(titlestr)
+    fig_hist.suptitle(titlestr)
+    fig_box.suptitle(titlestr)
+    
+    # Setup axis properties for histogram
+    ax_hist.legend(legendList)
+    ax_hist.set_xlim(0,bin_xlim)
+    ax_hist.set_xlabel("Latency (ms)")
+
+    # Setup axis properties for box plot
+    ax_box.legend(legendList)
+    ax_box.set_xlim(0,bin_xlim)
+    # ax_box.set_ylim(-0.5,1.5)
+    ax_box.set_xlabel("Latency (ms)")
+    fig_box.tight_layout()
+
     plt.show()
 
 
