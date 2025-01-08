@@ -164,8 +164,9 @@ def analyse_data(scenario,parent_folder,dur='60 seconds',window="1s"):
         rel_df = pd.read_csv(reliability_filename)
 
     # Get average and standard deviation
-    avg = timedf['Latency'].mean()
-    stdev = timedf['Latency'].std()
+    avg = timedf['Latency'].quantile()
+    stdev = (timedf['Latency'].quantile(0.75) - timedf['Latency'].quantile(0.25))/2
+    avg_wind = timedf[smastr].mean()
     avg_stdev = timedf[smastr].std()
     
     # Generate title string
@@ -244,8 +245,8 @@ def analyse_data(scenario,parent_folder,dur='60 seconds',window="1s"):
     return timedf, rel_df
 
 # Set test parameters
-scenario = [1,2,3,4]
-parentFolder = 'data/final_results'
+scenario = [3]
+parentFolder = 'data/enchantiW106'
 window = "1s"
 smastr = 'SMA'+str(window)
 dur = '10 minutes'
@@ -271,8 +272,8 @@ for delay in scenario:
     relList.append(tmpreliability)
 
     # Plot on axis
-    avg = tmpdf['Latency'].mean()
-    stdev = tmpdf['Latency'].std()
+    avg = tmpdf['Latency'].quantile()
+    stdev = (tmpdf['Latency'].quantile(0.75) - tmpdf['Latency'].quantile(0.25))/2
     legendstr = scenario_list[delay-1] +', Average = ' + str(np.round(avg,2)) + u"\u00B1" + str(np.round(stdev,2))
     legendList.append(legendstr)
     tmpdf.plot(ax=ax,x='relative_time',y=smastr,label=legendstr, figsize=(16,8))
@@ -283,7 +284,7 @@ for delay in scenario:
         plot_filename = parentFolder+"/"+"wifitests_"+str(delay)+"_latencydelay.png"
         tmpax = sns.displot(tmpdf, x='Latency')
         tmpax.set_axis_labels("Latency (ms)")
-        tmpax.set(xlim=(0,30))
+        tmpax.set(xlim=(0,np.ceil(max(tmpdf['Latency']))))
         tmpfig = plt.gcf()
         tmpfig.suptitle(titlestr)
         tmpfig.savefig(plot_filename)
@@ -311,7 +312,7 @@ for delay in scenario:
 # Show plot
 # ax.set_xlim(0,xlim)
 ax.legend(legendList)
-ax.set_ylim(0,10)
+ax.set_ylim(0,0.5)
 ax.set_xlabel('time (ns)')
 ax.set_ylabel('Latency (ms)')
 plt.show()
