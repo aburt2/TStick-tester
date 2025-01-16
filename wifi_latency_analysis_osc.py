@@ -159,7 +159,6 @@ if len(scenario) > 1:
             sns.histplot(tmpdf, x='Latency', bins=np.arange(0, bin_xlim, 0.1), ax=ax_hist)
 
     # Plot box plot
-    print(boxDf)
     sns.boxplot(data=boxDf, x='Latency', y = 'Condition',orient='h', width=0.2, whis=(0, 99), hue="Frequency", ax=ax_box)
     
 
